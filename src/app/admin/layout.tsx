@@ -1,16 +1,21 @@
 import { Sidebar } from "../../components/ui/Sidebar";
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    // 'flex' para colocar Sidebar e Conteúdo lado a lado
+    // 'bg-[#020617]' para garantir que o fundo é escuro em todo o lado
+    <div className="flex h-screen w-full bg-[#020617] overflow-hidden">
+      
+      {/* Sidebar Única e Fixa */}
       <Sidebar />
-      <main className="pl-64"> {/* Espaço para não ficar por baixo da sidebar */}
-        <div className="p-8">
-          {children}
-        </div>
+      
+      {/* Área onde as páginas (children) vão aparecer */}
+      <main className="flex-1 h-full overflow-y-auto">
+        {children}
       </main>
     </div>
   );

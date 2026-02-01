@@ -1,61 +1,59 @@
-import React from 'react';
+'use client';
+
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // Para saber em que página estamos
-import { 
-  LayoutDashboard, 
-  Users, 
-  Folders, 
-  FileText, 
-  Settings,
-  LogOut 
-} from 'lucide-react'; 
 import { Logo } from './Logo';
+import { auth } from '../../lib/firebase';
+import { signOut } from 'firebase/auth';
+import { LayoutDashboard, Users, FileUp, LogOut } from 'lucide-react';
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
 
-  const menuItems = [
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/'); // Redireciona para a página de login
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
+  };
+
+  const items = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/admin' },
     { icon: <Users size={20} />, label: 'Clientes', href: '/admin/clients' },
-    { icon: <Folders size={20} />, label: 'Projetos', href: '/admin/projects' },
-    { icon: <FileText size={20} />, label: 'Documentos', href: '#' },
+    { icon: <FileUp size={20} />, label: 'Arquivos', href: '/admin/files' },
   ];
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0">
-      <div className="p-6">
-        <Logo />
+    <aside className="w-72 h-screen bg-[#0F172A] border-r border-slate-800 flex flex-col p-8 flex-shrink-0">
+      
+      <div className="mb-12 flex justify-center py-4">
+        <Logo className="h-32 w-auto transition-transform hover:scale-105 duration-300" />
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 mt-4">
-        {menuItems.map((item, index) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={index}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
-                isActive 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-2">
+        {items.map((item) => (
+          <Link key={item.href} href={item.href} 
+            className={`flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-xs font-bold uppercase tracking-widest ${
+              pathname === item.href 
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                : 'text-slate-500 hover:text-white hover:bg-slate-800/30'
+            }`}>
+            {item.icon} <span>{item.label}</span>
+          </Link>
+        ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-100 space-y-4">
-        <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
-           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Developer</p>
-           <p className="text-xs font-semibold text-slate-700">André Silva</p>
-        </div>
-        <Link href="/login" className="flex items-center gap-3 px-4 py-2 w-full text-slate-400 hover:text-red-600 transition-colors text-sm font-medium">
-          <LogOut size={18} />
-          Sair
-        </Link>
+      <div className="pt-6 border-t border-slate-800">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-5 py-4 text-slate-600 hover:text-red-500 transition-colors group"
+        >
+          <LogOut size={18} className="group-hover:translate-x-1 transition-transform" /> 
+          <span className="text-[10px] font-black uppercase tracking-widest">Sair do Portal</span>
+        </button>
       </div>
     </aside>
   );

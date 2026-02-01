@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { Logo } from "../components/ui/Logo";
 import { Lock, Loader2 } from "lucide-react";
 
-export default function RootPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,48 +19,29 @@ export default function RootPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    
-    console.log("--- Início do Processo de Login ---");
 
     try {
-      // 1. Tenta Autenticar
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log("1. Autenticação com sucesso! UID:", user.uid);
-
-      // 2. Tenta ler o Firestore
-      console.log("2. A procurar documento na coleção 'users'...");
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("3. Documento encontrado! Dados:", userData);
-
-        if (userData.role === 'admin') {
-          console.log("4. Utilizador é Admin. A redirecionar para /admin...");
-          router.push("/admin");
-        } else {
-          console.log("4. Utilizador é Cliente. A redirecionar para /client...");
-          router.push("/client");
-        }
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        router.push("/admin");
       } else {
-        console.warn("3. Documento não encontrado no Firestore para este UID.");
-        setError("Erro: Perfil de utilizador não configurado na base de dados.");
+        router.push("/client");
       }
     } catch (err: any) {
-      console.error("ERRO DETALHADO:", err.code, err.message);
-      setError("Email ou palavra-passe incorretos.");
+      setError("Credenciais inválidas.");
     } finally {
       setLoading(false);
-      console.log("--- Fim do Processo ---");
     }
   };
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-[#020617]">
       
-      <div className="text-center mb-12 space-y-6">
-        <Logo className="h-32 md:h-40 mx-auto" /> 
+      <div className="text-center mb-10 space-y-4">
+        <Logo className="h-32 md:h-40 mx-auto" />
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight text-white">Client Hub</h1>
           <p className="text-slate-500 text-sm font-medium tracking-[0.2em] uppercase">
@@ -69,41 +50,39 @@ export default function RootPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[400px] glass-card p-8 md:p-10 rounded-[2.5rem] space-y-8">
-        <p className="text-center text-slate-400 text-sm leading-relaxed">
+      <div className="w-full max-w-[420px] bg-[#0F172A] border border-slate-800 p-10 rounded-[2.5rem] space-y-8 shadow-2xl">
+        <p className="text-center text-slate-400 text-sm leading-relaxed px-2">
           Faça login para gerir os seus projetos, enviar conteúdos e acompanhar o progresso em tempo real.
         </p>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <input 
-            type="email" 
-            placeholder="Email" 
-            className="input-dark w-full"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required 
-          />
-          <input 
-            type="password" 
-            placeholder="Palavra-passe" 
-            className="input-dark w-full"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required 
-          />
-          
-          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+          <div className="space-y-4">
+            <input 
+              type="email" 
+              placeholder="Email" 
+              className="input-dark"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input 
+              type="password" 
+              placeholder="Palavra-passe" 
+              className="input-dark"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="btn-glow text-lg w-full flex justify-center items-center gap-2"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Entrar no Portal"}
+          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+          
+          <button type="submit" disabled={loading} className="btn-premium">
+            {loading ? <Loader2 className="animate-spin" /> : "Entrar no Portal"}
           </button>
         </form>
 
-        <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-800">
+        <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-800/50">
           <Lock size={14} className="text-emerald-500" />
           <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
             Acesso Seguro

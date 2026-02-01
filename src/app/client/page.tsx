@@ -1,114 +1,163 @@
-'use client'; // Necessário para usar hooks como useState e useRouter
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { auth, db } from "../../lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { Logo } from "../../components/ui/Logo";
-import { Lock, Loader2 } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { auth, db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { Logo } from '../../components/ui/Logo';
+import { Layout, MessageSquare, Send, Clock, CheckCircle2, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function ClientPortal() {
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Procura o projeto onde o clientEmail é igual ao email do utilizador logado
+    const q = query(collection(db, "projects"), where("clientEmail", "==", user.email));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setProject({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    if (!message.trim()) return;
 
     try {
-      // 1. Autenticação no Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // 2. Verificar o Cargo (Role) no Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        if (userData.role === 'admin') {
-          router.push("/admin");
-        } else {
-          router.push("/client");
-        }
-      } else {
-        // Se o utilizador existe no Auth mas não no Firestore, tratamos como cliente por defeito
-        router.push("/client");
-      }
-    } catch (err: any) {
-      setError("Credenciais inválidas ou erro de ligação.");
+      const docRef = doc(db, "projects", project.id);
+      await updateDoc(docRef, {
+        feedback: arrayUnion({
+          text: message,
+          date: new Date().toISOString(),
+          sender: 'client'
+        })
+      });
+      setMessage("");
+    } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    signOut(auth);
+    router.push('/');
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#020617] flex items-center justify-center text-slate-500 italic">A carregar o seu portal...</div>;
+
+  if (!project) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+      <Logo className="h-20 mb-8 opacity-50" />
+      <h1 className="text-white font-bold text-xl">Nenhum projeto associado.</h1>
+      <p className="text-slate-500 text-sm mt-2">Contacte o André Silva para ativar o seu acesso.</p>
+      <button onClick={handleLogout} className="mt-8 text-slate-400 flex items-center gap-2 hover:text-white transition-all">
+        <LogOut size={18} /> Sair
+      </button>
+    </div>
+  );
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-[#020617]">
-      
-      <div className="text-center mb-10 space-y-4">
-        <Logo className="h-32 md:h-40 mx-auto" />
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-white">Client Hub</h1>
-          <p className="text-slate-500 text-sm font-medium tracking-[0.2em] uppercase">
-            André Silva Web Developer
-          </p>
+    <main className="min-h-screen bg-[#020617] p-6 md:p-12">
+      {/* Header do Cliente */}
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-16 gap-8">
+        <Logo className="h-16" />
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">Bem-vindo,</p>
+            <p className="text-white font-bold">{project.clientName}</p>
+          </div>
+          <button onClick={handleLogout} className="p-3 bg-slate-800/50 rounded-xl text-slate-400 hover:text-red-500 transition-all">
+            <LogOut size={20} />
+          </button>
         </div>
       </div>
 
-      <div className="w-full max-w-[400px] bg-[#0F172A] border border-slate-800 p-8 md:p-10 rounded-[2.5rem] space-y-8 shadow-xl">
-        <p className="text-center text-slate-400 text-sm leading-relaxed">
-          Área restrita para acompanhamento de projetos.
-        </p>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-4">
-            <input 
-              type="email" 
-              placeholder="Email" 
-              className="input-dark w-full bg-[#1E293B] border border-slate-700 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-600 transition-all"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input 
-              type="password" 
-              placeholder="Palavra-passe" 
-              className="input-dark w-full bg-[#1E293B] border border-slate-700 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-600 transition-all"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Card de Progresso */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="glass-card p-10 relative overflow-hidden">
+            <div className="relative z-10">
+              <span className="bg-blue-600/20 text-blue-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Estado do Site</span>
+              <h2 className="text-4xl font-black text-white mt-4 mb-6">{project.projectName}</h2>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Progresso de Desenvolvimento</p>
+                  <p className="text-3xl font-black text-blue-500">{project.progress}%</p>
+                </div>
+                <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${project.progress}%` }}></div>
+                </div>
+              </div>
+            </div>
+            {/* Decoração de fundo */}
+            <Layout className="absolute -right-8 -bottom-8 text-slate-800/20 w-64 h-64 -rotate-12" />
           </div>
 
-          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-blue-600 text-white font-bold rounded-2xl py-4 hover:bg-blue-500 active:scale-95 transition-all flex justify-center items-center"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : "Entrar no Portal"}
-          </button>
-        </form>
-
-        <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-800">
-          <Lock size={14} className="text-slate-500" />
-          <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-            Acesso Encriptado
-          </span>
+          {/* Galeria de Prints (Updates do André) */}
+          <div className="glass-card p-10">
+            <h3 className="text-white font-bold flex items-center gap-2 mb-8">
+              <CheckCircle2 size={20} className="text-blue-500" /> Pré-visualizações do Projeto
+            </h3>
+            {project.updates ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {project.updates.map((update: any, i: number) => (
+                  <div key={i} className="group relative rounded-2xl overflow-hidden border border-slate-800">
+                    <img src={update.url} alt="Update" className="w-full h-auto" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-600 text-sm italic">O André ainda não carregou imagens do desenvolvimento.</p>
+            )}
+          </div>
         </div>
-      </div>
 
-      <footer className="mt-16">
-        <p className="text-[10px] text-slate-800 font-bold uppercase tracking-[0.4em]">
-          ASWD © 2026
-        </p>
-      </footer>
+        {/* Coluna de Mensagens / Envio de Conteúdos */}
+        <div className="space-y-8">
+          <div className="glass-card p-8 flex flex-col h-full">
+            <h3 className="text-white font-bold flex items-center gap-2 mb-6">
+              <MessageSquare size={20} className="text-emerald-500" /> Enviar Conteúdos
+            </h3>
+            
+            <div className="flex-1 space-y-4 mb-6 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+              {project.feedback?.map((f: any, i: number) => (
+                <div key={i} className={`p-4 rounded-2xl text-xs ${f.sender === 'client' ? 'bg-blue-600/10 border border-blue-600/20 ml-4' : 'bg-slate-800/50 mr-4'}`}>
+                  <p className="text-slate-400 mb-1 font-bold uppercase text-[8px]">{f.sender === 'client' ? 'Você' : 'André Silva'}</p>
+                  <p className="text-slate-200 leading-relaxed">{f.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="relative">
+              <textarea 
+                placeholder="Escreva aqui textos, links ou feedback..."
+                className="input-dark w-full h-32 pt-4 resize-none text-sm"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <button type="submit" className="absolute bottom-4 right-4 p-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition-all text-white shadow-lg">
+                <Send size={18} />
+              </button>
+            </form>
+            <p className="text-[9px] text-slate-600 mt-4 uppercase font-bold text-center tracking-widest">O André será notificado</p>
+          </div>
+        </div>
+
+      </div>
     </main>
   );
 }
