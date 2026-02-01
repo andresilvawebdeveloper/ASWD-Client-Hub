@@ -1,21 +1,14 @@
 import React from 'react';
 
-interface LogoProps {
-  className?: string;
-}
-
-export const Logo = ({ className = "h-8 w-auto" }: LogoProps) => {
+export const Logo = ({ className = "h-32" }: { className?: string }) => {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      {/* Aqui é inserido o logo que você especificou */}
+    <div className={`flex items-center justify-center ${className}`}>
       <img 
         src="/logo.png" 
-        alt="Logo Plataforma" 
-        className="object-contain"
+        alt="ASWD Logo" 
+        // O h-full garante que a imagem preencha a altura definida no className
+        className="h-full w-auto object-contain"
       />
-      <span className="font-bold text-xl tracking-tight text-slate-900">
-        WebManager
-      </span>
     </div>
   );
 };

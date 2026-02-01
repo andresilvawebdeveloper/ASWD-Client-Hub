@@ -1,49 +1,84 @@
-import { Button } from "../../components/ui/Button";
-import { Plus, Folder, Users, Clock } from "lucide-react";
+import { Logo } from "../../components/ui/Logo";
+import { Users, Plus, Edit2, Trash2 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const stats = [
-    { label: "Clientes Ativos", value: "12", icon: <Users className="text-blue-600" /> },
-    { label: "Projetos em Curso", value: "5", icon: <Folder className="text-emerald-600" /> },
-    { label: "Aguardar Feedback", value: "3", icon: <Clock className="text-amber-600" /> },
+  const projects = [
+    { client: "Clínica Premium", type: "Website", progress: 75, status: "Development" },
+    { client: "Café Central", type: "Landing Page", progress: 100, status: "Finished" },
+    { client: "Imobiliária Lux", type: "Portal", progress: 15, status: "Design" },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Olá, André Silva</h1>
-          <p className="text-slate-500">Bem-vindo ao centro de comando dos seus projetos.</p>
-        </div>
-        <Button>
-          <Plus size={18} />
-          Novo Projeto
-        </Button>
-      </div>
-
-      {/* Grid de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-slate-50 rounded-lg">{stat.icon}</div>
-            </div>
-            <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-            <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+    <main className="min-h-screen bg-[#020617] text-slate-200 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Navbar Admin */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Logo className="h-10" />
+            <span className="text-[10px] font-bold bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full uppercase border border-blue-600/30">
+              Admin Panel
+            </span>
           </div>
-        ))}
-      </div>
+          <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+            <Plus size={18} /> Novo Projeto
+          </button>
+        </div>
 
-      {/* Lista de Projetos Recentes (Placeholder) */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-900">Projetos Recentes</h2>
+        {/* Estatísticas Rápidas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-[#0F172A] p-6 rounded-3xl border border-slate-800">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Total Clientes</p>
+            <p className="text-3xl font-black mt-1">03</p>
+          </div>
+          <div className="bg-[#0F172A] p-6 rounded-3xl border border-slate-800">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Sites em Curso</p>
+            <p className="text-3xl font-black mt-1 text-blue-500">02</p>
+          </div>
         </div>
-        <div className="p-12 text-center">
-          <p className="text-slate-400">Ainda não existem projetos ativos. Comece por criar um!</p>
+
+        {/* Tabela de Gestão */}
+        <div className="bg-[#0F172A] border border-slate-800 rounded-[2.5rem] overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-900/50 text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] border-b border-slate-800">
+                <th className="p-6">Cliente</th>
+                <th className="p-6">Progresso</th>
+                <th className="p-6">Estado</th>
+                <th className="p-6">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {projects.map((p, i) => (
+                <tr key={i} className="hover:bg-slate-900/30 transition-colors">
+                  <td className="p-6 italic font-bold text-white">{p.client}</td>
+                  <td className="p-6 w-1/3">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 h-1.5 bg-slate-950 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-600" style={{ width: `${p.progress}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-slate-400">{p.progress}%</span>
+                    </div>
+                  </td>
+                  <td className="p-6">
+                    <span className={`text-[9px] font-bold px-3 py-1 rounded-full uppercase ${
+                      p.progress === 100 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="p-6">
+                    <div className="flex gap-3">
+                      <button className="p-2 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-all"><Edit2 size={16}/></button>
+                      <button className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"><Trash2 size={16}/></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

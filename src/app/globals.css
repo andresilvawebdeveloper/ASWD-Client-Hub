@@ -3,64 +3,29 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Cores de Fundo e Texto */
-    --background: 210 40% 98%; /* Um cinza azulado muito leve */
-    --foreground: 222.2 84% 4.9%;
-
-    /* Cores de Cartões e Menus */
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    /* Cores de Destaque (Baseadas no seu tom de azul) */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-
-    /* Bordas e Inputs */
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.75rem;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    /* Cor sólida e estática para eliminar a vibração */
+    background-color: #020617; 
+    @apply text-slate-200 min-h-screen selection:bg-blue-500/30;
   }
 }
 
-/* --- Utilidades Personalizadas para o ASWD Hub --- */
+@layer components {
+  /* Cartão Sólido com borda subtil (sem transparências complexas) */
+  .glass-card {
+    @apply bg-[#0F172A] border border-slate-800 shadow-xl;
+  }
 
-/* Efeito de transição suave em todos os elementos interativos */
-* {
-  @apply transition-all duration-200 ease-in-out;
-}
+  /* Inputs com cor sólida */
+  .input-dark {
+    @apply w-full bg-[#1E293B] border border-slate-700 rounded-2xl px-5 py-4 
+           text-white placeholder:text-slate-500 outline-none 
+           focus:border-blue-600 transition-all duration-200;
+  }
 
-/* Estilização da barra de scroll para um look mais "app" */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300;
-}
-
-/* Animação para entrada de Modais */
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.animate-modal {
-  animation: modalIn 0.2s ease-out;
+  /* Botão Premium (Estático) */
+  .btn-glow {
+    @apply w-full bg-blue-600 text-white font-bold rounded-2xl py-4 
+           hover:bg-blue-500 active:scale-95 transition-all duration-200;
+  }
 }
