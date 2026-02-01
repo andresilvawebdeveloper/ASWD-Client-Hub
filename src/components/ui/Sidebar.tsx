@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Logo } from './Logo';
 import { auth } from '../../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, Users, FileUp, LogOut } from 'lucide-react';
+// Adicionei ReceiptEuro para os Orçamentos
+import { LayoutDashboard, Users, FileUp, LogOut, ReceiptEuro } from 'lucide-react';
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -14,7 +15,7 @@ export const Sidebar = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.push('/'); // Redireciona para a página de login
+      router.push('/'); 
     } catch (error) {
       console.error("Erro ao sair:", error);
     }
@@ -24,6 +25,8 @@ export const Sidebar = () => {
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/admin' },
     { icon: <Users size={20} />, label: 'Clientes', href: '/admin/clients' },
     { icon: <FileUp size={20} />, label: 'Arquivos', href: '/admin/files' },
+    // Novo item de Orçamentos
+    { icon: <ReceiptEuro size={20} />, label: 'Orçamentos', href: '/admin/orcamentos' },
   ];
 
   return (
