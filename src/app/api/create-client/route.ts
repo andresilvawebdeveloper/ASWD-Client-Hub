@@ -2,25 +2,29 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import * as admin from 'firebase-admin';
 
-// 1. Inicializar o Resend com a tua chave
+// Inicializar o Resend com a tua chave de API
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Função para inicializar o Firebase Admin de forma segura.
- * Resolve o erro "The default Firebase app does not exist".
+ * Resolve erros de inicialização e trata a limpeza da chave PEM.
  */
 function initAdmin() {
   if (admin.apps.length === 0) {
     try {
+      const rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+      const formattedKey = rawKey
+        .replace(/\\n/g, '\n') 
+        .replace(/^"|"$/g, ''); 
+
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          // Importante: trata as quebras de linha da chave privada
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          privateKey: formattedKey,
         }),
       });
-      console.log("✅ Firebase Admin Inicializado com sucesso.");
+      console.log("✅ Firebase Admin Inicializado");
     } catch (error: any) {
       console.error("❌ Erro ao inicializar Firebase Admin:", error.message);
       throw new Error("Falha na configuração do servidor Firebase.");
@@ -31,72 +35,86 @@ function initAdmin() {
 
 export async function POST(req: Request) {
   try {
-    // Garantir que o Admin está pronto
     const firebaseAdmin = initAdmin();
-    
-    // Obter dados do formulário
     const { clientEmail, clientName, projectName, password } = await req.json();
 
-    console.log(`🚀 A iniciar criação para: ${clientEmail}`);
+    let userRecord;
+    let isNewUser = false;
 
-    // 1. Criar o utilizador no Firebase Authentication
-    const userRecord = await firebaseAdmin.auth().createUser({
-      email: clientEmail,
-      password: password,
-      displayName: clientName,
-    });
+    try {
+      // 1. Verificar se o utilizador já existe no Firebase Authentication
+      userRecord = await firebaseAdmin.auth().getUserByEmail(clientEmail);
+      console.log("ℹ️ Utilizador já existe no Auth. Apenas associando novo projeto.");
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        // 2. Se não existir, criar a conta e o perfil no Firestore
+        isNewUser = true;
+        userRecord = await firebaseAdmin.auth().createUser({
+          email: clientEmail,
+          password: password,
+          displayName: clientName,
+        });
 
-    // 2. Criar o perfil do utilizador no Firestore (Coleção 'users')
-    // Isto é vital para que o nosso sistema de login saiba que ele é um 'client'
-    const db = firebaseAdmin.firestore();
-    await db.collection('users').doc(userRecord.uid).set({
-      email: clientEmail,
-      name: clientName,
-      role: 'client',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+        const db = firebaseAdmin.firestore();
+        await db.collection('users').doc(userRecord.uid).set({
+          email: clientEmail,
+          role: 'client',
+          name: clientName,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log("✅ Novo utilizador criado com sucesso.");
+      } else {
+        throw error;
+      }
+    }
 
-    // 3. Enviar o email de boas-vindas via Resend
-    const emailResponse = await resend.emails.send({
-      from: 'ASWD Hub <onboarding@resend.dev>', // No futuro, altera para o teu domínio
-      to: clientEmail,
-      subject: `Acesso ao Portal: ${projectName}`,
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #020617; color: #f8fafc; padding: 40px; border-radius: 24px;">
-          <h1 style="color: #2563eb; font-size: 28px; font-weight: 800; margin-bottom: 16px;">Olá, ${clientName}!</h1>
-          <p style="font-size: 16px; line-height: 1.6; color: #94a3b8;">
-            O teu portal de acompanhamento para o projeto <strong>${projectName}</strong> já está ativo e pronto a usar.
-          </p>
-          
-          <div style="background-color: #0f172a; padding: 32px; border-radius: 16px; border: 1px solid #1e293b; margin: 32px 0;">
-            <p style="margin: 0 0 12px 0; color: #94a3b8; font-size: 14px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Dados de Acesso</p>
-            <p style="margin: 0 0 8px 0; font-size: 16px;"><strong>Email:</strong> ${clientEmail}</p>
-            <p style="margin: 0; font-size: 16px;"><strong>Palavra-passe:</strong> <span style="color: #3b82f6; font-family: monospace;">${password}</span></p>
-          </div>
+    // 3. Preparar o Email
+    const subject = isNewUser 
+      ? `Bem-vindo ao Portal: ${projectName}` 
+      : `Novo Projeto Adicionado: ${projectName}`;
 
-          <div style="text-align: center; margin-top: 40px;">
-            <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}" 
-               style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 18px 36px; border-radius: 14px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);">
-               Entrar no Portal
-            </a>
-          </div>
-          
-          <hr style="border: 0; border-top: 1px solid #1e293b; margin: 40px 0;">
-          <p style="font-size: 10px; color: #475569; text-align: center; text-transform: uppercase; letter-spacing: 3px;">
-            André Silva Web Developer © 2026
-          </p>
+    const emailContent = `
+      <div style="font-family: sans-serif; background-color: #020617; color: white; padding: 40px; border-radius: 24px; max-width: 600px; margin: auto;">
+        <h1 style="color: #2563eb; margin-bottom: 24px;">Olá, ${clientName}!</h1>
+        <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;">
+          ${isNewUser 
+            ? `O teu acesso ao portal para o acompanhamento do projeto <strong>${projectName}</strong> foi criado com sucesso.` 
+            : `Um novo projeto foi associado à tua conta: <strong>${projectName}</strong>.`}
+        </p>
+        
+        <div style="background-color: #0f172a; padding: 24px; border-radius: 16px; border: 1px solid #1e293b; margin: 32px 0;">
+          <p style="margin: 0 0 10px 0; font-weight: bold; color: #94a3b8; font-size: 12px; text-transform: uppercase;">Credenciais de Acesso</p>
+          <p style="margin: 0 0 8px 0;"><strong>Email:</strong> ${clientEmail}</p>
+          ${isNewUser 
+            ? `<p style="margin: 0;"><strong>Palavra-passe Temporária:</strong> <span style="color: #3b82f6; font-family: monospace;">${password}</span></p>` 
+            : '<p style="margin: 0; color: #94a3b8;">Utiliza a tua palavra-passe habitual.</p>'}
         </div>
-      `,
+
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}" 
+             style="display: inline-block; background-color: #2563eb; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);">
+             Entrar no Portal
+          </a>
+        </div>
+        
+        <p style="font-size: 11px; color: #64748b; margin-top: 40px; text-align: center; border-top: 1px solid #1e293b; padding-top: 20px;">
+          André Silva Web Developer • andresilvawebdev.pt
+        </p>
+      </div>
+    `;
+
+    // 4. Enviar o Email via Resend usando o teu domínio oficial
+    await resend.emails.send({
+      from: 'André Silva <noreply@andresilvawebdev.pt>',
+      to: clientEmail,
+      subject: subject,
+      html: emailContent,
     });
 
-    console.log("✅ Processo concluído com sucesso!");
-    return NextResponse.json({ success: true, id: userRecord.uid });
+    return NextResponse.json({ success: true, uid: userRecord.uid });
 
   } catch (error: any) {
-    console.error("❌ Erro detalhado na API:", error);
-    return NextResponse.json(
-      { error: error.message || "Erro interno no servidor" }, 
-      { status: 500 }
-    );
+    console.error("❌ Erro na API:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
