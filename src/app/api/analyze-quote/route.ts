@@ -22,37 +22,58 @@ export async function POST(req: Request) {
     const db = firebaseAdmin.firestore();
     const data = await req.json();
     const answers = data.answers;
+    const allText = JSON.stringify(answers).toLowerCase();
 
-    // --- LÓGICA DA TUA TABELA DE PREÇOS ---
-    let precoMin = 300;
-    let precoMax = 600;
-    const servico = JSON.stringify(answers);
+    // 1. Definição da Base (valores da sua tabela)
+    let minBase = 300; 
+    let maxBase = 600;
 
-    if (servico.includes("Site Completo")) { precoMin = 700; precoMax = 1500; }
-    else if (servico.includes("Loja Online")) { precoMin = 1200; precoMax = 3000; }
+    if (allText.includes("loja online") || allText.includes("ecommerce") || allText.includes("vendas")) {
+      minBase = 1200; maxBase = 3000;
+    } else if (allText.includes("site completo") || allText.includes("institucional completo") || allText.includes("blog")) {
+      minBase = 700; maxBase = 1500;
+    } else if (allText.includes("simples") || allText.includes("landing")) {
+      minBase = 300; maxBase = 600;
+    }
 
-    // Cálculo das 4 opções
-    const barato = precoMin;
-    const justo = (precoMin + precoMax) / 2;
-    const premium = precoMax;
-    const sugestao = (justo * 1.1).toFixed(0);
+    // 2. Soma de Extras (Valores médios da sua tabela)
+    let extrasMin = 0;
+    let extrasMax = 0;
+
+    if (allText.includes("domínio")) { extrasMin += 8; extrasMax += 25; }
+    if (allText.includes("alojamento") || allText.includes("hosting")) { extrasMin += 30; extrasMax += 120; }
+    if (allText.includes("pagamento") || allText.includes("multibanco")) { extrasMin += 50; extrasMax += 200; }
+    if (allText.includes("seo")) { extrasMin += 100; extrasMax += 300; }
+
+    const totalMin = minBase + extrasMin;
+    const totalMax = maxBase + extrasMax;
+
+    // 3. Cálculo dos 4 Valores Solicitados
+    const orcamentoBarato = totalMin;
+    const orcamentoCaro = totalMax;
+    const orcamentoJusto = Math.round((totalMin + totalMax) / 2);
+    // Valor médio ponderado para ajudar a decidir (Sugestão)
+    const valorSugestao = Math.round((orcamentoJusto + orcamentoCaro) / 2);
 
     const orcamentoDoc = {
-      cliente: answers["Qual o seu nome?"] || "Cliente",
+      cliente: answers["Qual o seu nome?"] || answers["Nome"] || "Cliente",
       email: data.email || "Não fornecido",
-      servico: servico.length > 50 ? "Projeto Web" : servico,
-      valores: { barato, justo, premium, sugestao },
+      projeto: answers["Que tipo de projeto procuras?"] || "Web Project",
+      valores: {
+        barato: orcamentoBarato,
+        justo: orcamentoJusto,
+        caro: orcamentoCaro,
+        sugestao: valorSugestao
+      },
       respostas: answers,
-      data: new Date().toISOString()
+      data: new Date().toISOString(),
+      status: "analisado"
     };
 
     await db.collection('orcamentos').add(orcamentoDoc);
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("Erro na API:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-export async function GET() {
-  return new Response("API de Orçamentos Ativa");
 }
