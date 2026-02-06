@@ -11,14 +11,11 @@ import {
   CheckCircle2, 
   LogOut, 
   CreditCard, 
-  ShieldCheck 
+  ShieldCheck,
+  Wrench
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
-
-// Inicializa o Stripe com a tua chave pública
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function ClientPortal() {
   const [project, setProject] = useState<any>(null);
@@ -31,7 +28,6 @@ export default function ClientPortal() {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Procura o projeto onde o clientEmail é igual ao email do utilizador logado
     const q = query(collection(db, "projects"), where("clientEmail", "==", user.email));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -44,33 +40,32 @@ export default function ClientPortal() {
     return () => unsubscribe();
   }, []);
 
-const handlePayment = async (type: 'deposit' | 'full') => {
-  setIsPaying(true);
-  try {
-    const response = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: type === 'deposit' ? project.valorTotal / 2 : project.valorTotal,
-        projectName: project.projectName,
-        customerEmail: project.clientEmail,
-        projectId: project.id,
-        paymentType: type
-      }),
-    });
+  const handlePayment = async (type: 'deposit' | 'full') => {
+    setIsPaying(true);
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: type === 'deposit' ? project.valorTotal / 2 : project.valorTotal,
+          projectName: project.projectName,
+          customerEmail: project.clientEmail,
+          projectId: project.id,
+          paymentType: type
+        }),
+      });
 
-    const data = await response.json();
-
-    // Se a API devolver um URL, o navegador viaja para lá
-    if (data.url) {
-      window.location.href = data.url;
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsPaying(false);
     }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setIsPaying(false);
-  }
-};
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -132,8 +127,45 @@ const handlePayment = async (type: 'deposit' | 'full') => {
         
         <div className="lg:col-span-2 space-y-8">
           
-          {/* CARD DE PAGAMENTO / ADJUDICAÇÃO */}
-          {project.status !== 'pago' && project.valorTotal > 0 && (
+          {/* CARD DE MANUTENÇÃO (Apenas aparece se categoria for Manutenção) */}
+          {project.status !== 'pago' && project.category === 'Manutenção' && project.valorTotal > 0 && (
+            <div className="glass-card p-10 border-l-4 border-orange-500 bg-orange-600/5 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-8">
+                  <div>
+                    <h3 className="text-white font-bold text-xl flex items-center gap-2">
+                      <Wrench className="text-orange-500" /> Ativação de Manutenção
+                    </h3>
+                    <p className="text-slate-400 text-sm mt-2">Suporte técnico e atualizações para o seu projeto.</p>
+                  </div>
+                  <ShieldCheck size={40} className="text-slate-800/50" />
+                </div>
+
+                <button 
+                  disabled={isPaying}
+                  onClick={() => handlePayment('full')}
+                  className="w-full p-6 rounded-2xl bg-orange-600 hover:bg-orange-700 transition-all text-left group disabled:opacity-50"
+                >
+                  <p className="text-orange-200 text-[10px] font-black uppercase tracking-widest">Pagamento Único / Mensal</p>
+                  <p className="text-2xl font-black text-white mt-1">
+                    {project.valorTotal.toFixed(2)}€
+                  </p>
+                  <p className="text-orange-300 text-[10px] mt-4 font-bold group-hover:translate-x-1 transition-transform italic">
+                    {isPaying ? 'A PROCESSAR...' : 'ATIVAR MANUTENÇÃO AGORA →'}
+                  </p>
+                </button>
+                
+                <div className="mt-6 flex items-center gap-4 text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
+                  <span>🔒 Pagamento Seguro via Stripe</span>
+                  <span>•</span>
+                  <span>MBWay, Cartão e Apple Pay</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CARD DE DESENVOLVIMENTO (Apenas aparece se categoria for Desenvolvimento) */}
+          {project.status !== 'pago' && (project.category === 'Desenvolvimento' || !project.category) && project.valorTotal > 0 && (
             <div className="glass-card p-10 border-l-4 border-blue-500 bg-blue-600/5 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
@@ -154,7 +186,7 @@ const handlePayment = async (type: 'deposit' | 'full') => {
                   >
                     <p className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Sinal de Entrada (50%)</p>
                     <p className="text-2xl font-black text-white mt-1">
-                      {project.valorTotal ? (project.valorTotal / 2).toFixed(2) : '0.00'}€
+                      {(project.valorTotal / 2).toFixed(2)}€
                     </p>
                     <p className="text-blue-300 text-[10px] mt-4 font-bold group-hover:translate-x-1 transition-transform italic">
                       {isPaying ? 'A PROCESSAR...' : 'PAGAR AGORA →'}
@@ -168,18 +200,12 @@ const handlePayment = async (type: 'deposit' | 'full') => {
                   >
                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Totalidade (100%)</p>
                     <p className="text-2xl font-black text-white mt-1">
-                      {project.valorTotal ? project.valorTotal.toFixed(2) : '0.00'}€
+                      {project.valorTotal.toFixed(2)}€
                     </p>
                     <p className="text-slate-400 text-[10px] mt-4 font-bold group-hover:translate-x-1 transition-transform italic">
                       {isPaying ? 'A PROCESSAR...' : 'PAGAR TOTAL →'}
                     </p>
                   </button>
-                </div>
-                
-                <div className="mt-6 flex items-center gap-4 text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
-                  <span>🔒 Pagamento Seguro via Stripe</span>
-                  <span>•</span>
-                  <span>Aceita MBWay, Cartão e Apple Pay</span>
                 </div>
               </div>
             </div>
