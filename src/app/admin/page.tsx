@@ -1,18 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link'; // Importado para permitir a navegação
+import Link from 'next/link';
 import { db } from '../../lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { CreateProjectModal } from "../../components/admin/CreateProjectModal";
-import { Plus, Users, Layout, Clock, ExternalLink } from "lucide-react";
+import { Plus, Users, Layout, Clock, ExternalLink, Trash2 } from "lucide-react";
+
 
 export default function AdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Escutar a base de dados em tempo real
+  // Estatísticas calculadas
+  const totalProjects = projects.length;
+  const uniqueClients = new Set(projects.map(p => p.clientEmail)).size;
+  const pendingPayments = projects.filter(p => p.status !== 'pago' && p.valorTotal > 0).length;
+
   useEffect(() => {
     const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
     
@@ -27,6 +32,18 @@ export default function AdminDashboard() {
 
     return () => unsubscribe();
   }, []);
+
+  // Função para eliminar projeto com confirmação
+  const handleDeleteProject = async (id: string, name: string) => {
+    if (confirm(`Tem a certeza que deseja eliminar o projeto "${name}"? Esta ação não pode ser desfeita.`)) {
+      try {
+        await deleteDoc(doc(db, "projects", id));
+      } catch (err) {
+        console.error("Erro ao eliminar:", err);
+        alert("Erro ao eliminar o projeto.");
+      }
+    }
+  };
 
   return (
     <div className="p-8 md:p-12">
@@ -44,14 +61,13 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      {/* Estatísticas Dinâmicas baseadas nos dados reais do Firebase */}
+      {/* Estatísticas Reais */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <StatCard icon={<Users />} label="Clientes" value={projects.length.toString().padStart(2, '0')} />
-        <StatCard icon={<Layout />} label="Projetos" value={projects.length.toString().padStart(2, '0')} />
-        <StatCard icon={<Clock />} label="Aguardar" value="00" />
+        <StatCard icon={<Users />} label="Clientes Únicos" value={uniqueClients.toString().padStart(2, '0')} />
+        <StatCard icon={<Layout />} label="Total Projetos" value={totalProjects.toString().padStart(2, '0')} />
+        <StatCard icon={<Clock />} label="Pagamentos Pendentes" value={pendingPayments.toString().padStart(2, '0')} />
       </div>
 
-      {/* Lista de Projetos Real-Time */}
       <div className="glass-card overflow-hidden">
         <div className="p-8 border-b border-slate-800 flex justify-between items-center">
           <h3 className="text-white font-bold">Projetos Ativos</h3>
@@ -69,33 +85,48 @@ export default function AdminDashboard() {
             projects.map((project) => (
               <div key={project.id} className="p-6 hover:bg-slate-800/30 transition-colors flex items-center justify-between group">
                 <div className="flex items-center gap-6">
-                  <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 font-bold">
-                    {project.clientName?.charAt(0)}
+                  <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 font-bold uppercase">
+                    {project.clientName?.charAt(0) || 'P'}
                   </div>
                   <div>
                     <h4 className="text-white font-bold">{project.projectName}</h4>
                     <p className="text-slate-500 text-xs">{project.clientName} • {project.clientEmail}</p>
+                    {/* Badge de Status Financeiro */}
+                    <span className={`text-[8px] uppercase font-bold px-2 py-0.5 rounded ${
+                      project.status === 'pago' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'
+                    }`}>
+                      {project.status || 'Pendente'}
+                    </span>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-12">
+                <div className="flex items-center gap-6 md:gap-12">
                   <div className="text-right hidden md:block">
                     <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Progresso</p>
                     <div className="w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-blue-600 transition-all duration-1000" 
-                        style={{ width: `${project.progress}%` }}
+                        style={{ width: `${project.progress || 0}%` }}
                       ></div>
                     </div>
                   </div>
                   
-                  {/* ALTERAÇÃO: Agora é um Link que leva à página do projeto [id] */}
-                  <Link 
-                    href={`/admin/project/${project.id}`}
-                    className="p-3 rounded-xl bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
-                  >
-                    <ExternalLink size={18} />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {/* Botão Eliminar */}
+                    <button 
+                      onClick={() => handleDeleteProject(project.id, project.projectName)}
+                      className="p-3 rounded-xl bg-slate-800/50 text-slate-500 hover:bg-red-500/10 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+
+                    <Link 
+                      href={`/admin/project/${project.id}`}
+                      className="p-3 rounded-xl bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
+                    >
+                      <ExternalLink size={18} />
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))
