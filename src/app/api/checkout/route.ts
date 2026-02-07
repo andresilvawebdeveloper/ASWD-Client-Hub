@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Esta lógica impede o erro se a chave estiver vazia durante o build
+// Inicialização segura para TypeScript e Build da Vercel
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-01-28.clover', // Use uma versão estável
+      apiVersion: '2026-01-28.clover' as any, // "as any" evita conflitos de versão no TS
     }) 
   : null;
-export async function POST(req) {
+
+export async function POST(req: Request) {
   try {
-    // Se o stripe for null, significa que a chave não foi lida corretamente
+    // Verificação de segurança
     if (!stripe) {
-    return NextResponse.json({ error: "Stripe não configurado" }, { status: 500 });
-  }
+      console.error("ERRO: STRIPE_SECRET_KEY não encontrada no ambiente.");
+      return NextResponse.json({ error: "Stripe não configurado" }, { status: 500 });
+    }
 
     const { amount, projectName, customerEmail, projectId, paymentType } = await req.json();
 
@@ -42,10 +44,8 @@ export async function POST(req) {
     });
 
     return NextResponse.json({ url: session.url });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Erro no Stripe:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
-
