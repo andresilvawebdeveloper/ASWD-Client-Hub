@@ -1,40 +1,59 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { db } from '../../../../lib/firebase'; // Garanta que este caminho está correto
+import { doc, updateDoc, increment } from 'firebase/firestore';
 
-// ESTA É A PARTE CRÍTICA: Inicialização segura para o build não falhar
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2026-01-28.clover' as any,
     }) 
   : null;
 
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 export async function POST(req: Request) {
-  // Se o stripe for null durante o build, saímos elegantemente
-  if (!stripe) {
-    return NextResponse.json({ error: "Stripe não configurado" }, { status: 500 });
+  if (!stripe || !webhookSecret) {
+    console.error("Webhook: Stripe ou Secret não configurados.");
+    return NextResponse.json({ error: "Configuração em falta" }, { status: 500 });
   }
 
   const payload = await req.text();
   const sig = req.headers.get('stripe-signature');
 
-  if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: "Faltam cabeçalhos ou segredo do webhook" }, { status: 400 });
-  }
+  let event: Stripe.Event;
 
   try {
-    // Aqui o Stripe já está protegido pelo "if (!stripe)" acima
-    const event = stripe.webhooks.constructEvent(
-      payload, 
-      sig, 
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-
-    // Lógica para processar o evento (ex: payment_intent.succeeded)
-    // ...
-
-    return NextResponse.json({ received: true });
+    event = stripe.webhooks.constructEvent(payload, sig!, webhookSecret);
   } catch (err: any) {
-    console.error('Erro no Webhook:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error(`❌ Erro na assinatura do Webhook: ${err.message}`);
+    return NextResponse.json({ error: 'Assinatura inválida' }, { status: 400 });
   }
+
+  // 2. Processar o evento de sucesso no pagamento
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    
+    // Recuperamos os dados que guardámos no checkout
+    const projectId = session.metadata?.projectId;
+    const amountPaid = session.amount_total ? session.amount_total / 100 : 0;
+
+    if (projectId) {
+      try {
+        const projectRef = doc(db, 'projects', projectId);
+        
+        await updateDoc(projectRef, {
+          status: 'Em Desenvolvimento', // Muda o status automaticamente
+          lastPaymentDate: new Date().toISOString(),
+          // Se quiser somar ao total já pago:
+          // totalPaid: increment(amountPaid) 
+        });
+
+        console.log(`✅ Projeto ${projectId} atualizado para pago.`);
+      } catch (dbError) {
+        console.error("Erro ao atualizar Firebase:", dbError);
+      }
+    }
+  }
+
+  return NextResponse.json({ received: true }, { status: 200 });
 }
