@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Inicialização segura: não usamos o "!" para evitar erro de build na Vercel
+// Esta lógica impede o erro se a chave estiver vazia durante o build
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-01-28.clover', // Use uma versão estável reconhecida pelo SDK
+      apiVersion: '2026-01-28.clover', // Use uma versão estável
     }) 
   : null;
-
 export async function POST(req) {
   try {
     // Se o stripe for null, significa que a chave não foi lida corretamente
     if (!stripe) {
-      throw new Error("STRIPE_SECRET_KEY não configurada nas variáveis de ambiente.");
-    }
+    return NextResponse.json({ error: "Stripe não configurado" }, { status: 500 });
+  }
 
     const { amount, projectName, customerEmail, projectId, paymentType } = await req.json();
 
