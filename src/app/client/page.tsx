@@ -127,8 +127,8 @@ export default function ClientPortal() {
         
         <div className="lg:col-span-2 space-y-8">
           
-          {/* CARD DE MANUTENÇÃO (Apenas aparece se categoria for Manutenção) */}
-          {project.status !== 'pago' && project.category === 'Manutenção' && project.valorTotal > 0 && (
+          {/* CARD DE MANUTENÇÃO - Ativo quando o status for aguardando e categoria for Manutenção */}
+          {project.status === 'aguardando_pagamento' && project.category === 'Manutenção' && project.valorTotal > 0 && (
             <div className="glass-card p-10 border-l-4 border-orange-500 bg-orange-600/5 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
@@ -136,7 +136,7 @@ export default function ClientPortal() {
                     <h3 className="text-white font-bold text-xl flex items-center gap-2">
                       <Wrench className="text-orange-500" /> Ativação de Manutenção
                     </h3>
-                    <p className="text-slate-400 text-sm mt-2">Suporte técnico e atualizações para o seu projeto.</p>
+                    <p className="text-slate-400 text-sm mt-2">Suporte técnico e atualizações mensais.</p>
                   </div>
                   <ShieldCheck size={40} className="text-slate-800/50" />
                 </div>
@@ -146,26 +146,20 @@ export default function ClientPortal() {
                   onClick={() => handlePayment('full')}
                   className="w-full p-6 rounded-2xl bg-orange-600 hover:bg-orange-700 transition-all text-left group disabled:opacity-50"
                 >
-                  <p className="text-orange-200 text-[10px] font-black uppercase tracking-widest">Pagamento Único / Mensal</p>
+                  <p className="text-orange-200 text-[10px] font-black uppercase tracking-widest">Valor do Serviço</p>
                   <p className="text-2xl font-black text-white mt-1">
                     {project.valorTotal.toFixed(2)}€
                   </p>
                   <p className="text-orange-300 text-[10px] mt-4 font-bold group-hover:translate-x-1 transition-transform italic">
-                    {isPaying ? 'A PROCESSAR...' : 'ATIVAR MANUTENÇÃO AGORA →'}
+                    {isPaying ? 'A PROCESSAR...' : 'ATIVAR AGORA →'}
                   </p>
                 </button>
-                
-                <div className="mt-6 flex items-center gap-4 text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
-                  <span>🔒 Pagamento Seguro via Stripe</span>
-                  <span>•</span>
-                  <span>MBWay, Cartão e Apple Pay</span>
-                </div>
               </div>
             </div>
           )}
 
-          {/* CARD DE DESENVOLVIMENTO (Apenas aparece se categoria for Desenvolvimento) */}
-          {project.status !== 'pago' && (project.category === 'Desenvolvimento' || !project.category) && project.valorTotal > 0 && (
+          {/* CARD DE DESENVOLVIMENTO - Ativo quando status for aguardando e categoria Desenvolvimento */}
+          {project.status === 'aguardando_pagamento' && (project.category === 'Desenvolvimento' || !project.category) && project.valorTotal > 0 && (
             <div className="glass-card p-10 border-l-4 border-blue-500 bg-blue-600/5 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
@@ -173,7 +167,7 @@ export default function ClientPortal() {
                     <h3 className="text-white font-bold text-xl flex items-center gap-2">
                       <CreditCard className="text-blue-500" /> Adjudicação do Projeto
                     </h3>
-                    <p className="text-slate-400 text-sm mt-2">Escolha uma modalidade para iniciar o desenvolvimento.</p>
+                    <p className="text-slate-400 text-sm mt-2">Escolha uma modalidade para iniciar o trabalho.</p>
                   </div>
                   <ShieldCheck size={40} className="text-slate-800/50" />
                 </div>
@@ -184,12 +178,12 @@ export default function ClientPortal() {
                     onClick={() => handlePayment('deposit')}
                     className="p-6 rounded-2xl bg-blue-600 hover:bg-blue-700 transition-all text-left group disabled:opacity-50"
                   >
-                    <p className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Sinal de Entrada (50%)</p>
+                    <p className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Entrada (50%)</p>
                     <p className="text-2xl font-black text-white mt-1">
                       {(project.valorTotal / 2).toFixed(2)}€
                     </p>
                     <p className="text-blue-300 text-[10px] mt-4 font-bold group-hover:translate-x-1 transition-transform italic">
-                      {isPaying ? 'A PROCESSAR...' : 'PAGAR AGORA →'}
+                      {isPaying ? 'A PROCESSAR...' : 'PAGAR SINAL →'}
                     </p>
                   </button>
 
@@ -198,7 +192,7 @@ export default function ClientPortal() {
                     onClick={() => handlePayment('full')}
                     className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700 hover:border-slate-500 transition-all text-left group disabled:opacity-50"
                   >
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Totalidade (100%)</p>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total (100%)</p>
                     <p className="text-2xl font-black text-white mt-1">
                       {project.valorTotal.toFixed(2)}€
                     </p>
@@ -276,7 +270,6 @@ export default function ClientPortal() {
                 <Send size={18} />
               </button>
             </form>
-            <p className="text-[9px] text-slate-600 mt-4 uppercase font-bold text-center tracking-widest">O André será notificado</p>
           </div>
         </div>
 

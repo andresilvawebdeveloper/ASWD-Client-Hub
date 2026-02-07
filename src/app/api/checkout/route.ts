@@ -35,8 +35,9 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ id: session.id });
+  return NextResponse.json({ url: session.url }); // ALTERADO DE id PARA url
   } catch (err: any) {
+    console.error('Erro no Stripe:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
