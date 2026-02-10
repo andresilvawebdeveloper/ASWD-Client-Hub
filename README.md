@@ -30,23 +30,11 @@ Portal profissional de gestão de projetos, desenvolvido para centralizar a comu
 
 ---
 
-## ⚙️ Configuração de Ambiente
 
-Para rodar este projeto, configura as seguintes variáveis de ambiente no teu `.env.local` ou no painel da Vercel:
+## ⚖️ Compliance & Legal
+*O projeto inclui páginas dedicadas a Termos de Serviço e Políticas de Privacidade (RGPD), garantindo conformidade com as normas europeias e as exigências do Stripe para contas profissionais de prestação de serviços.
 
-```env
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
 
-# Stripe Configuration
-STRIPE_SECRET_KEY=
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=
 
-# App Configuration
-NEXT_PUBLIC_URL=[https://clienthub.andresilvawebdev.pt](https://clienthub.andresilvawebdev.pt)
+
+
