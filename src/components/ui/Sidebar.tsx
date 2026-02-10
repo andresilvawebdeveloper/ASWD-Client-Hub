@@ -24,7 +24,6 @@ export const Sidebar = () => {
   const items = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/admin' },
     { icon: <Users size={20} />, label: 'Projetos', href: '/admin/new-project' },
-    { icon: <FileUp size={20} />, label: 'Arquivos', href: '/admin/files' },
     // Novo item de Orçamentos
     { icon: <ReceiptEuro size={20} />, label: 'Orçamentos', href: '/admin/orcamentos' },
   ];
