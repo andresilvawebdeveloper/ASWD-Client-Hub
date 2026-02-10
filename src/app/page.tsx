@@ -6,7 +6,8 @@ import { auth, db } from "../lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Logo } from "../components/ui/Logo";
-import { Lock, Loader2 } from "lucide-react";
+import { Lock, Loader2, Link, ShieldCheck, FileText } from "lucide-react";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -90,11 +91,33 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <footer className="mt-16">
-        <p className="text-[10px] text-slate-800 font-bold uppercase tracking-[0.4em]">
-          ASWD © 2026
-        </p>
-      </footer>
+<footer className="mt-auto py-12 text-center border-t border-slate-900/30">
+  <div className="flex justify-center gap-6 mb-6">
+    {/* Usamos <a> em vez de <Link> para forçar o refresh e evitar o erro de rota do Next.js */}
+    <a 
+      href="/legal" 
+      className="text-[10px] font-black text-slate-600 hover:text-blue-500 transition-all uppercase tracking-[0.2em] cursor-pointer"
+    >
+      Termos de Serviço
+    </a>
+    
+    <div className="w-[1px] h-3 bg-slate-800 self-center"></div>
+    
+    <a 
+      href="/legal" 
+      className="text-[10px] font-black text-slate-600 hover:text-blue-500 transition-all uppercase tracking-[0.2em] cursor-pointer"
+    >
+      Privacidade
+    </a>
+  </div>
+  
+  <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.5em] mb-2">
+    ASWD © 2026
+  </p>
+  <p className="text-[7px] text-slate-800 font-bold uppercase tracking-widest">
+    André Silva WebDev • Todos os direitos reservados
+  </p>
+</footer>
     </main>
   );
 }
