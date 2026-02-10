@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Inicialização segura para TypeScript e Build da Vercel
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-01-28.clover' as any,
+      apiVersion: '2025-01-27.acacia' as any, // Versão estável
     }) 
   : null;
 
@@ -17,13 +16,13 @@ export async function POST(req: Request) {
 
     const { amount, projectName, customerEmail, projectId, paymentType } = await req.json();
 
-    // Verificação básica de segurança para o valor
     if (!amount || amount < 1) {
       return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
     }
 
-    // Garantir que a URL base não venha vazia
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+    // Lógica Dinâmica: Detecta se é localhost ou produção automaticamente
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+    const baseUrl = origin.replace(/\/$/, ''); 
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'multibanco'],
@@ -42,9 +41,8 @@ export async function POST(req: Request) {
       ],
       mode: 'payment',
       customer_email: customerEmail,
-      // Limpamos possíveis barras duplas na URL
-      success_url: `${baseUrl.replace(/\/$/, '')}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl.replace(/\/$/, '')}/client`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/client`,
       metadata: {
         projectId,
         paymentType,
