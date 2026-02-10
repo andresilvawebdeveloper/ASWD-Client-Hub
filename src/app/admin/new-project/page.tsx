@@ -46,7 +46,7 @@ export default function NewProject() {
   return (
     <main className="min-h-screen bg-[#020617] p-6 md:p-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-white mb-8 transition-all uppercase tracking-widest">
+        <Link href="/admin" className="inline-flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-white mb-8 transition-all uppercase tracking-widest">
           <ChevronLeft size={14} /> Voltar ao Painel
         </Link>
 
