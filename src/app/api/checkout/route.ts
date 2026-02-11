@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-01-27.acacia' as any, // Versão estável
+      apiVersion: '2025-01-27.acacia' as any,
     }) 
   : null;
 
@@ -20,12 +20,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
     }
 
-    // Lógica Dinâmica: Detecta se é localhost ou produção automaticamente
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
     const baseUrl = origin.replace(/\/$/, ''); 
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'multibanco'],
+      // 1. ALTERAÇÃO: Ativa todos os métodos que configurou no painel do Stripe (MB WAY incluído)
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      // 2. ALTERAÇÃO: Garante que o MB WAY e Multibanco têm as definições corretas
+      payment_method_options: {
+        mb_way: {},
+        multibanco: {},
+      },
       line_items: [
         {
           price_data: {
